@@ -1,0 +1,13 @@
+<robot name="car">  
+  <link name="base_link">  
+    <visual>  
+       <geometry>  
+         <box size="1.8 .8 1.5"/>  
+       </geometry>  
+       <origin rpy="0 0 0" xyz="0 0 0"/>  
+       <material name="white">  
+         <color rgba="1 1 1 .5"/>  
+       </material>  
+    </visual>  
+  </link>  
+</robot> 

@@ -1,0 +1,18 @@
+<launch>
+  <node pkg="joint_state_publisher" exec="joint_state_publisher" output="screen">
+    <arg name="model" default="$(find-pkg-share robot_config)/urdf/car.urdf" />
+    <arg name="gui" default="false" />
+    <arg name="rvizconfig" default="$(find urdf_tutorial)/rviz/urdf.rviz" />
+    <param name="robot_description" command="$(find-pkg-share xacro)/xacro.py $(val model)" />
+    <param name="use_gui" value="$(val gui)" />
+  </node>
+
+  <node pkg="robot_state_publisher" exec="robot_state_publisher">
+    <arg name="model" default="$(find-pkg-share robot_config)/urdf/car.urdf" />
+    <arg name="gui" default="false" />
+    <arg name="rvizconfig" default="$(find urdf_tutorial)/rviz/urdf.rviz" />
+    <param name="robot_description" command="$(find-pkg-share xacro)/xacro.py $(val model)" />
+    <param name="use_gui" value="$(val gui)" />
+  </node>
+
+</launch>

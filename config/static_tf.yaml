@@ -1,0 +1,67 @@
+static_tf: #监听某些话题频率
+  - {
+      frame_id: "base_link",
+      child_frame_id: "front_right_ult_id",
+      translation_x: 0.169,
+      translation_y: -0.59,
+      translation_z: 0.8,
+      rotation_x: 0,
+      rotation_y: 0,
+      rotation_z: 0,
+      rotation_w: 1,
+    }
+  - {
+    frame_id: "base_link",
+    child_frame_id: "right_front_down_ult_id",
+    translation_x: -0.444,
+    translation_y: -0.593,
+    translation_z: 0.2945,
+    rotation_x: 0,
+    rotation_y: 0,
+    rotation_z: 0,
+    rotation_w: 1,
+  }
+  - {
+    frame_id: "base_link",
+    child_frame_id: "left_front_down_ult_id",
+    translation_x: 1.249,
+    translation_y: 0.518,
+    translation_z: 0.5265,
+    rotation_x: 0,
+    rotation_y: 0,
+    rotation_z: 0,
+    rotation_w: 1,
+  }
+  - {
+    frame_id: "base_link",
+    child_frame_id: "front_left_ult_id",
+    translation_x: 0.688,
+    translation_y: 0.582,
+    translation_z: 0.132,
+    rotation_x: 0,
+    rotation_y: 0,
+    rotation_z: 0,
+    rotation_w: 1,
+  }
+  - {
+    frame_id: "base_link",
+    child_frame_id: "front_center_ult_id",
+    translation_x: 1.4,
+    translation_y: 0,
+    translation_z: 0.7,
+    rotation_x: 0,
+    rotation_y: 0,
+    rotation_z: 0,
+    rotation_w: 1,
+  }
+  - {
+    frame_id: "base_link",
+    child_frame_id: "back_center_ult_id",
+    translation_x: -0.59,
+    translation_y: 0,
+    translation_z: 0.55,
+    rotation_x: 0,
+    rotation_y: 0,
+    rotation_z: 0,
+    rotation_w: 1,
+  }
