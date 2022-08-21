@@ -1,0 +1,11 @@
+<launch>
+  <arg name="robot_config_file"  default="$(find robot_config)/config/robot_config.yaml"/>
+  <arg name="topic_state_yaml"  default="$(find robot_config)/config/topic_state.yaml"/>
+  <node pkg="robot_config" type="robot_config_node" name="robot_config_node" output="screen" >
+    <!-- <rosparam command="load" file="$(env HOME)/cti-launch/config/topic_state.yaml"/> -->
+    <rosparam command="load" file="$(arg topic_state_yaml)"/>
+    <param name="topic_state_yaml_path"  value="$(arg topic_state_yaml)"/>
+    <param name="robot_config_file"  value="$(arg robot_config_file)"/>
+  </node>
+</launch>
+

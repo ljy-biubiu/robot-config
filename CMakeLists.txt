@@ -1,89 +1,54 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 2.8.3)
 project(robot_config)
 
-# Default to C99
-if(NOT CMAKE_C_STANDARD)
-  set(CMAKE_C_STANDARD 99)
-endif()
-SET(CMAKE_CXX_FLAGS_DEBUG "$ENV{CXXFLAGS} -O0 -Wall -g -ggdb")
-SET(CMAKE_CXX_FLAGS_RELEASE "$ENV{CXXFLAGS} -O3 -Wall")
+## Compile as C++11, supported in ROS Kinetic and newer
+add_compile_options(-std=c++11)
 
-# Default to C++17
-if(NOT CMAKE_CXX_STANDARD)
-  set(CMAKE_CXX_STANDARD 17)
-endif()
-
-
-if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-  add_compile_options(-Wall -Wextra -Wpedantic -fdiagnostics-color=always)
-endif()
-
-
-# find dependencies
-find_package(ament_cmake REQUIRED)
-find_package(ament_index_cpp REQUIRED)
-find_package(cti_msgs REQUIRED)
-find_package(ctilog REQUIRED)
-find_package(geometry_msgs REQUIRED)
-find_package(PkgConfig REQUIRED)
-find_package(rclcpp REQUIRED)
-find_package(sensor_msgs REQUIRED)
-find_package(std_msgs REQUIRED)
-find_package(tf2 REQUIRED)
-find_package(tf2_ros REQUIRED)
-find_package(yaml-cpp REQUIRED)
-find_package(diagnostic_msgs REQUIRED)
-
-pkg_check_modules(JSONCPP REQUIRED jsoncpp)
-
-add_executable(${PROJECT_NAME}_node
-  src/main.cpp
-  src/robot_config.cpp
-  )
-
-target_include_directories(${PROJECT_NAME}_node PUBLIC
-  "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
-  "$<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>"
-  "$<INSTALL_INTERFACE:include>"
-  ${YAML_CPP_INCLUDE_DIRS}
-  ${JSONCPP_INCLUDE_DIRS}
-  )
-
-target_link_libraries(${PROJECT_NAME}_node
-  ${YAML_CPP_LIBRARIES}
-  ${JSONCPP_LIBRARIES}
+find_package(catkin REQUIRED COMPONENTS
+	roscpp
+	rospy
+	ctilog
+	cti_msgs
+	tf
 )
-ament_target_dependencies(${PROJECT_NAME}_node
-  "ament_index_cpp"
-  "cti_msgs"
-  "ctilog"
-  "geometry_msgs"
-  "rclcpp"
-  "sensor_msgs"
-  "std_msgs"
-  "tf2"
-  "tf2_ros"
-  "diagnostic_msgs"
-  )
 
-if(BUILD_TESTING)
-  find_package(ament_lint_auto REQUIRED)
-  ament_lint_auto_find_test_dependencies()
-endif()
+catkin_package(
+#  INCLUDE_DIRS include
+#  LIBRARIES robot_config
+	CATKIN_DEPENDS roscpp rospy cti_msgs 
+#  DEPENDS system_lib
+)
+
+
+SET( CMAKE_BUILD_TYPE "Debug")
+
+FIND_LIBRARY(YAML_CPP_LIBRARIES yaml-cpp)
+if(NOT YAML_CPP_LIBRARIES)
+	FIND_PACKAGE(yaml-cpp REQUIRED)
+	INCLUDE_DIRECTORIES(${YAML_CPP_INCLUDE_DIRS})
+endif(NOT YAML_CPP_LIBRARIES)
+#find package(PkgConfig REQUIRED)
+#pkg_search_module()
+
+include_directories(
+# include
+	${catkin_INCLUDE_DIRS}
+)
+
+add_executable(${PROJECT_NAME}_node src/robot_config.cpp )
+add_dependencies(${PROJECT_NAME}_node 
+#	${${PROJECT_NAME}_EXPORTED_TARGETS} 
+	${catkin_EXPORTED_TARGETS}
+)
+target_link_libraries(${PROJECT_NAME}_node ${catkin_LIBRARIES} ${YAML_CPP_LIBRARIES} jsoncpp)
+
+
 
 install(TARGETS ${PROJECT_NAME}_node
-  DESTINATION lib/${PROJECT_NAME}
+	ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+	LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+	RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
+install(DIRECTORY launch config urdf
+        DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
 
-install(DIRECTORY
-  launch
-  DESTINATION share/${PROJECT_NAME}/
-)
-
-install(DIRECTORY
-  config
-  DESTINATION share/${PROJECT_NAME}/
-)
-
-
-ament_package()

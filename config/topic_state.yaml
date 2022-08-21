@@ -1,34 +1,6 @@
-topic_state: #监听某些话题频率
-  - {topic: "/cti/sensor/lslidar/lh_back_scan",type: "sensor_msgs::LaserScan",name: "lh_lidar",timeout: 0.3,enable: true,mul: 0}
-  - {
-      topic: "/livox/lidar/front_left",
-      type: "sensor_msgs::PointCloud2",
-      name: "front_left",
-      timeout: 1.0,
-      enable: true,
-      mul: 0,
-    }
-  - {
-      topic: "/livox/lidar/rear_right",
-      type: "sensor_msgs::PointCloud2",
-      name: "rear_right",
-      timeout: 0.3,
-      enable: true,
-      mul: 0,
-    }
-  - {
-      topic: "/cti/sensor/rslidar/PointCloud2",
-      type: "sensor_msgs::PointCloud2",
-      name: "top_lidar",
-      timeout: 0.3,
-      enable: true,
-      mul: 0,
-    }
-  - {
-      topic: "/cti/fpga_serial/imu",
-      type: "sensor_msgs::Imu",
-      name: "imu",
-      timeout: 0.3,
-      enable: true,
-      mul: 0,
-    }
+topic_state:
+  - { topic: "/cti/sensor/lslidar/lh_back_scan", type: "sensor_msgs::LaserScan", name: "lh_lidar", timeout: 0.3, enable: true, mul: 1}
+  - { topic: "/cti/sensor/lslidar/back_scan", type: "sensor_msgs::LaserScan", name: "back_lidar", timeout: 0.5, enable: true, mul: 0}
+  - { topic: "/cti/sensor/rslidar/PointCloud2", type: "sensor_msgs::PointCloud2", name: "top_lidar", timeout: 0.3, enable: true, mul: 0}
+  - { topic: "/cti/sensor/rslidar/Bpearl_PointCloud2", type: "sensor_msgs::PointCloud2", name: "front_lidar", timeout: 0.3, enable: true, mul: 1}
+  - { topic: "/cti/fpga_serial/imu", type: "sensor_msgs::Imu", name: "imu", timeout: 0.3, enable: true, mul: 0}

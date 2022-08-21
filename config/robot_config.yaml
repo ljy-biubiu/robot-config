@@ -1,85 +1,47 @@
-/**:
-  ros__parameters:
-    base_info:
-      robot_type:                      4         # 0 球球 1 摩托 2 两轮箱子  3 四轮两驱 4  四轮四驱
-      scene:                           0
-    scene_config:
-      - scene_type: 0
-        scene_str:                     "sty"
-        init_x:                        -10
-        init_y:                        174
-        init_z:                        0
-        init_yaw:                      -1.57
-      - scene_type: 1
-        scene_str:                     "hwxc"
-        init_x:                        -10
-        init_y:                        174
-        init_z:                        0
-        init_yaw:                      0
-      - scene_type: 2
-        scene_str:                     "mgc"
-        init_x:                        -10
-        init_y:                        174
-        init_z:                        0
-        init_yaw:                      0
-    type_config:
-        max_vx:                        3.5
-        max_vz:                        1.0
-        #cti_cmd_vel_smoother
-        feedback_flag:                 0
-        acc_x_up:                      0.4
-        acc_x_down:                    2
-        acc_z:                         0.5
-        #move_controlloer
-        distance_phase_goal:           3.0
-        acc_for_curva:                 0.28
-        acc_for_x:                     0.2
-        #waypoints_follow
-        dis_for_back_global:           5
-        K_stop_enable:                 1
-        dis_tolerate_for_end:          0.4
-        dis_tolerate_for_course:       1.5
-        rad_tolerate:                  6.25
-        cos_proportion:                1.5
-        rad_to_vz_proportion:          0.25
-        reverse_vx:                    0.5
-        #box
-        guiderail2bumper:              0.05
-        disLoadToUnload:               1.0
-        disToLoad:                     1.0
-    vehicleModel:
-      type: 1 #0 阳光车四轮四驱 1 环卫车四轮四驱
-      width: 0.95
-      lenght: 2.270
-      higth: 1.650
-      shaft_width: 0.772
-      shaft_length: 1.18
-      wheel_radius: 0.165
-      #--边刷
-      brush_radius: 0.32
-      brush_hight: 0.35
-      brush_in_radius: 0.2
-      brush_stretch_min: 0.667
-      brush_stretch_max: 0.980
-      #base到车头距离，base为四轮中心
-      base_to_front: 1.094
-      #车中心到上雷达距离
-      baseToTopLidar: 0.194
-      #上雷达高度
-      topLidarHeight: 1.606
-
-    vehicleParam:
-      #最小转弯半径
-      turn_radius_min: 2.0
-      #最大最小线速度
-      max_vel: 3.5
-      min_vel: -0.5
-      #最大最小旋转速度rad/sec
-      max_rot_vel: 1.0
-      min_rot_vel: 0.4
-      #加减速
-      acc_lim_x: 2.5
-      acc_lim_th: 3.2
-      #目标点距离方向允许误差
-      goal_yaw_tolerance: 0.1
-      goal_xy_tolerance: 1
+base_info:
+  robot_type:                      4         # 0 球球 1 摩托 2 两轮箱子  3 四轮两驱 4  四轮四驱  
+  scene:                           0
+scene_config:
+  - scene_type: 0
+    scene_str:                     "sty"
+    init_x:                        -10
+    init_y:                        174
+    init_z:                        0
+    init_yaw:                      -1.57
+  - scene_type: 1
+    scene_str:                     "hwxc"
+    init_x:                        -10
+    init_y:                        174
+    init_z:                        0
+    init_yaw:                      0
+  - scene_type: 2
+    scene_str:                     "mgc"
+    init_x:                        -10
+    init_y:                        174
+    init_z:                        0
+    init_yaw:                      0
+type_config:
+    max_vx:                        3.5
+    max_vz:                        1.0
+    #cti_cmd_vel_smoother
+    feedback_flag:                 0
+    acc_x_up:                      0.4
+    acc_x_down:                    2
+    acc_z:                         0.5
+    #move_controlloer
+    distance_phase_goal:           3.0        
+    acc_for_curva:                 0.28
+    acc_for_x:                     0.2
+    #waypoints_follow
+    dis_for_back_global:           5          
+    K_stop_enable:                 1
+    dis_tolerate_for_end:          0.4
+    dis_tolerate_for_course:       1.5
+    rad_tolerate:                  6.25
+    cos_proportion:                1.5
+    rad_to_vz_proportion:          0.25
+    reverse_vx:                    0.5
+    #box
+    guiderail2bumper:              0.05
+    disLoadToUnload:               1.0
+    disToLoad:                     1.0

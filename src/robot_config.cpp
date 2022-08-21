@@ -1,643 +1,684 @@
-#include <yaml-cpp/yaml.h>
-#include <ament_index_cpp/get_package_share_directory.hpp>
+/*************************************************************************
+	> File Name: robot_config.cpp
+	> Author: ma6174
+	> Mail: ma6174@163.com 
+	> Created Time: 2018年08月21日 星期二 10时58分51秒
+ ************************************************************************/
+
 #include <iostream>
+#include "robot_config.h"
+#include "std_msgs/String.h"
 #include <jsoncpp/json/json.h>
-#include <geometry_msgs/msg/transform_stamped.hpp>
-#include "robot_config/robot_config.h"
+
+using namespace std;
+using namespace cti::log;
+constexpr char const *kN = "config";
+const std::string home_str = std::string(std::getenv("HOME"));
 
 //--------------------------------------
-using std::placeholders::_1;
-
 template <class T>
-void SensorState<T>::init() {
-  if (!data_.topic.empty()) {
-    sub_ = node_->template create_subscription<T>(
-        data_.topic, rclcpp::QoS{1}.best_effort(),
-        std::bind(&SensorState::callback, this, std::placeholders::_1));
-  }
-}
-
-template <class T>
-int SensorState<T>::getState() {
-  int stat = StateType::ERROR;
-  if (data_.enable) {
-    if (timer_.state) {
-      if (timer_.getDuration(node_->now().seconds()) > data_.timeout) {
-        stat = StateType::OVERTIME;
-      } else {
-        stat = StateType::NORMAL;
-      }
+void SensorState<T>::init(ros::NodeHandle &nh_)
+{
+    if (!data.topic.empty())
+    {
+        sub = nh_.subscribe(data.topic, 1, &SensorState::callback, this);
     }
-  } else {
-    stat = StateType::NORMAL;
-  }
-  return stat;
 }
 
 template <class T>
-std::string SensorState<T>::getTopic() {
-  return data_.topic;
-}
-
-template <class T>
-std::string SensorState<T>::getName() {
-  return data_.name;
-}
-
-template <class T>
-std::string SensorState<T>::getType() {
-  return data_.type;
-}
-
-template <class T>
-float SensorState<T>::getTimeout() {
-  return data_.timeout;
-}
-
-template <class T>
-bool SensorState<T>::getEnable() {
-  return data_.enable;
-}
-
-template <class T>
-int SensorState<T>::getMul() {
-  return data_.mul;
-}
-
-template <class T>
-void SensorState<T>::callback(const DataTypeSharedPtr msg) {
-  if (data_.mul == 0) {
-    monitor_exist_lidar(data_.topic);
-  }
-  timer_.set();
-}
-
-template <class T>
-void SensorState<T>::monitor_exist_lidar(const std::string &str) {
-  std::ofstream fout;
-  YAML::Node config = YAML::LoadFile(topic_config_path_);
-  fout.open(topic_config_path_, std::ios::out);
-  if (!fout.is_open()) {
-    std::cout << "can't open " + topic_config_path_ << std::endl;
-  }
-
-  fout << "topic_state:" << std::endl;
-
-  for (int i = 0; config["topic_state"].size() > i; i++) {
-    std::string value_enable{"true"};
-    std::string value_mul{config["topic_state"][i]["mul"].as<std::string>()};
-    if (config["topic_state"][i]["enable"].as<bool>() == 0) {
-      value_enable = "false";
+int SensorState<T>::state()
+{
+    int stat = State::ERROR;
+    if (data.enable)
+    {
+        if (timer.state)
+        {
+            if (timer.getDuration() > data.timeout)
+            {
+                stat = State::OVERTIME;
+            }
+            else
+            {
+                stat = State::NORMAL;
+            }
+        }
     }
-    if (str == config["topic_state"][i]["topic"].as<std::string>()) {
-      value_mul = "1";
+    else
+    {
+        stat = State::NORMAL;
+    }
+    return stat;
+}
+template <class T>
+std::string SensorState<T>::getTopic()
+{
+    return data.topic;
+}
+
+template <class T>
+std::string SensorState<T>::getName()
+{
+    return data.name;
+}
+
+template <class T>
+std::string SensorState<T>::getType()
+{
+    return data.type;
+}
+
+template <class T>
+float SensorState<T>::getTimeout()
+{
+    return data.timeout;
+}
+
+template <class T>
+bool SensorState<T>::getEnable()
+{
+    return data.enable;
+}
+
+template <class T>
+int SensorState<T>::getMul()
+{
+    return data.mul;
+}
+
+template <class T>
+void SensorState<T>::monitor_exist_lidar(const string &str)
+{
+    ofstream fout;// home_str + "/log/robot_config.log";
+    YAML::Node config = YAML::LoadFile(topic_state_yaml_path_);
+    fout.open(topic_state_yaml_path_, ios::out);
+
+    if (!fout.is_open())
+    {
+        // config = YAML::LoadFile(topic_state_yaml_path_);
+        // fout.open(topic_state_yaml_path_);
+        Info("修改 topic_state_yaml 文件失败");
+        return;
     }
 
-    fout << " "
-         << " - { topic: \""
-         << config["topic_state"][i]["topic"].as<std::string>()
-         << "\", type: \"" << config["topic_state"][i]["type"].as<std::string>()
-         << "\", name: \"" << config["topic_state"][i]["name"].as<std::string>()
-         << "\", timeout: " << config["topic_state"][i]["timeout"].as<double>()
-         << ", enable: " << value_enable << ", mul: " << value_mul << "}"
-         << std::endl;
-  }
-  fout.close();
+    fout << "topic_state:" << std::endl;
+
+    for (int i = 0; config["topic_state"].size() > i; i++)
+    {
+        std::string value_enable{"true"};
+        std::string value_mul{config["topic_state"][i]["mul"].as<std::string>()};
+        if (config["topic_state"][i]["enable"].as<bool>() == 0)
+        {
+            value_enable = "false";
+        }
+        if (str == config["topic_state"][i]["topic"].as<std::string>())
+        {
+            value_mul = "1";
+        }
+
+        fout << " "
+             << " - { topic: \"" << config["topic_state"][i]["topic"].as<std::string>()
+             << "\", type: \"" << config["topic_state"][i]["type"].as<std::string>()
+             << "\", name: \"" << config["topic_state"][i]["name"].as<std::string>()
+             << "\", timeout: " << config["topic_state"][i]["timeout"].as<double>()
+             << ", enable: " << value_enable << ", mul: " << value_mul << "}" << std::endl;
+    }
+
+    fout.close();
+}
+
+template <class T>
+void SensorState<T>::callback(const T &msg)
+{
+    if (data.mul == 0)
+    {
+        monitor_exist_lidar(data.topic);
+    }
+    timer.set();
 }
 
 //-----------------------------------------
-RobotConfig::RobotConfig() : Node("robot_config") { init(); }
+RobotConfig::RobotConfig() : pnh_("~")
+{
+}
 
-RobotConfig::~RobotConfig() = default;
+RobotConfig::~RobotConfig()
+{
+}
 
-void RobotConfig::init() {
-  RCLCPP_INFO_STREAM(this->get_logger(), "robot config init");
-
-  //获取cti_path
-  cti_file_path_ = this->declare_parameter<std::string>("CTI_FILE_PATH", "");
-  parameter_server_["CTI_FILE_PATH"] = cti_file_path_;
-  cti_topic_config_path_ =
-      this->declare_parameter<std::string>("CTI_TOPIC_CONFIG_FILE_PATH", "");
-  parameter_server_["CTI_TOPIC_CONFIG_FILE_PATH"] = cti_topic_config_path_;
-  cti_vehicle_config_file_path_ =
-      this->declare_parameter<std::string>("CTI_VEHICLE_CONFIG_FILE_PATH", "");
-  parameter_server_["CTI_VEHICLE_CONFIG_FILE_PATH"] =
-      cti_vehicle_config_file_path_;
-
-  cti_static_tf_file_path_ = this->declare_parameter<std::string>(
-      "CTI_STATIC_TF_CONFIG_FILE_PATH", "");
-  parameter_server_["CTI_STATIC_TF_CONFIG_FILE_PATH"] =
-      cti_static_tf_file_path_;
-
-  //发布话题
-  map_data_pub_ = this->create_publisher<cti_msgs::msg::MapDataConfig>(
-      "/robot_config/map_data_config", rclcpp::QoS{1}.transient_local());
-
-  robot_parm_pub_ = this->create_publisher<cti_msgs::msg::RobotParamConfig>(
-      "/robot_config/robot_param_config", rclcpp::QoS{1}.transient_local());
-  robot_version_pub_ =
-      this->create_publisher<cti_msgs::msg::RobotVersionDisplay>(
-          "/cti/robot_config/robotVersion", rclcpp::QoS{1}.transient_local());
-  sensor_state_pub_ = this->create_publisher<cti_msgs::msg::BoxState>(
-      "/cti/robot_config/sensorState", rclcpp::QoS{1});
-  pub_errorArray_publisher =
-      this->create_publisher<cti_msgs::msg::ErrorStatusArray>(
-          "/cti/error_status/get", rclcpp::QoS{1});
-  pub_error_msg = this->create_publisher<cti_msgs::msg::ErrorStatus>(
-      "/cti/error_status/set", rclcpp::QoS{1}.transient_local());
-  parameter_server_pub_ = this->create_publisher<std_msgs::msg::String>(
-      "/robot_config/parameter_server", rclcpp::QoS{1}.transient_local());
-
-  //订阅话题
-  robot_version_sub_ =
-      this->create_subscription<cti_msgs::msg::RobotVersionDisplay>(
-          "/cti/fpga_serial/operationControlVersion",
-          rclcpp::QoS{1}.transient_local(),
-          std::bind(&RobotConfig::robotVersionCallback, this,
-                    std::placeholders::_1));
-  robot_env_sub_ = this->create_subscription<std_msgs::msg::String>(
-      "/cti/robot_env", rclcpp::QoS{1}.transient_local(),
-      std::bind(&RobotConfig::robotEnvCallback, this, std::placeholders::_1));
-  localizer_state_sub_ =
-      this->create_subscription<cti_msgs::msg::RobotLocalizerState>(
-          "/cti_localizer_state", rclcpp::QoS{1},
-          std::bind(&RobotConfig::localizerStateCallback, this,
-                    std::placeholders::_1));
-  sub_error_status_ = this->create_subscription<cti_msgs::msg::ErrorStatus>(
-      "/cti/error_status/set", rclcpp::QoS{1},
-      std::bind(&RobotConfig::error_status_Callback, this,
-                std::placeholders::_1));
-
-  parameter_server_sub = this->create_subscription<std_msgs::msg::String>(
-      "/robot_config/parameter_server",
-      rclcpp::QoS{10}.transient_local(),
-      [this](const std_msgs::msg::String::SharedPtr msg)
-      { parameterServerCallback(msg); });
-
-
-  // ros2 topic echo --qos-profile services_default --qos-durability
-  // transient_local  /cti/error_status/set 定时器
-  timer_ = this->create_wall_timer(std::chrono::milliseconds(100),
-                                   [this]() { this->timercallback(); });
-
-  // 发布静态tf
-  getStaticTfParams(cti_static_tf_file_path_);
-  tf_publisher_ = std::make_shared<tf2_ros::StaticTransformBroadcaster>(this);
-  // makeUltStaticTransforms();
-
-  declareVehicleConfigParams();
-  load_env_param();
-  pubParameterServer();
-  publishMapconfig(run_env_);
-
-  //--读取参数--
-  std::vector<TopicState> topicStates;
-  getTopicStateParams(topicStates);
-  sensor_states_.clear();
-  for (auto &topicState : topicStates) {
-    if (topicState.type == "sensor_msgs::PointCloud2") {
-      std::shared_ptr<StateBase> ptr =
-          std::make_shared<SensorState<sensor_msgs::msg::PointCloud2>>(
-              this, topicState, cti_topic_config_path_);
-      sensor_states_.emplace_back(ptr);
-    } else if (topicState.type == "sensor_msgs::LaserScan") {
-      std::shared_ptr<StateBase> ptr =
-          std::make_shared<SensorState<sensor_msgs::msg::LaserScan>>(
-              this, topicState, cti_topic_config_path_);
-      sensor_states_.emplace_back(ptr);
-    } else if (topicState.type == "sensor_msgs::Imu") {
-      std::shared_ptr<StateBase> ptr =
-          std::make_shared<SensorState<sensor_msgs::msg::Imu>>(
-              this, topicState, cti_topic_config_path_);
-      sensor_states_.emplace_back(ptr);
+void RobotConfig::init()
+{
+    std::string log_path_;
+    if (nh_.getParam("CTI_RUN_LOG_PATH", log_path_))
+    {
+        log_path_ += "/robot_config.log";
     }
-  }
-
-  pubErrorMsg("SENSOR", 0, 11, " 没有初始化 ");
-}
-
-
-void RobotConfig::parameterServerCallback(const std_msgs::msg::String::SharedPtr msg){
-
-  std::cout<<"parameterServerCallback"<<std::endl;
-  Json::Value parameter_server;
-  Json::Reader reader;
-  reader.parse(msg->data, parameter_server);
-  float vehicleModel_higth = parameter_server["vehicleModel.higth"].asFloat();
-  float vehicleModel_shaft_length = parameter_server["vehicleModel.shaft_length"].asFloat();
-  float vehicleModel_wheel_radius = parameter_server["vehicleModel.wheel_radius"].asFloat();
-  float vehicleModel_rearRigheLidarX = parameter_server["vehicleModel.rearRigheLidarX"].asFloat();
-  float vehicleModel_base_to_front = parameter_server["vehicleModel.base_to_front"].asFloat();
-
-
-  StaticTfState state;
-  //base_link to center_pose
-  state.frame_id = "base_link";
-  state.child_frame_id = "center_pose";
-  state.translation_x = vehicleModel_shaft_length/2;
-  state.translation_z = vehicleModel_higth/2;
-  state.rotation_w = 1;
-  staticTfStates_.emplace_back(state);
-  //base_link to rear_pose
-  state.frame_id = "base_link";
-  state.child_frame_id = "rear_pose";
-  state.translation_x = vehicleModel_rearRigheLidarX;
-  state.translation_z = vehicleModel_wheel_radius;
-  state.rotation_w = 1;
-  staticTfStates_.emplace_back(state);
-  //base_link to front_pose
-  state.frame_id = "base_link";
-  state.child_frame_id = "front_pose";
-  state.translation_x = vehicleModel_base_to_front;
-  state.translation_z = vehicleModel_wheel_radius;
-  state.rotation_w = 1;
-  staticTfStates_.emplace_back(state);
-
-}
-
-
-void RobotConfig::load_env_param() {
-  //读取vmap version版本
-  std::ifstream fout;
-  // boot_sh/version
-  std::string read_ver_path{cti_file_path_ + "/version"};
-  fout.open(read_ver_path);
-  if (!fout.is_open()) {
-    RCLCPP_INFO_STREAM(this->get_logger(), "打开" + read_ver_path + "失败,");
-    run_env_ = "sty";
-    parameter_server_["CTI_RUN_ENV"] = "sty";
-    parameter_server_["CTI_RUN_VER"] = "v3.0";
-    parameter_server_["ROBOT_N"] = "CTI-0";
-  } else {
-    std::vector<std::string> nums;
-    std::string tmp;
-    while (getline(fout, tmp)) {
-      char *str = (char *)tmp.c_str();  // string --> char
-      const char *split = ":";
-      char *p = strtok(str, split);  //:分隔依次取出
-
-      while (p != NULL) {
-        nums.push_back(p);
-        p = strtok(NULL, split);
-      }
-      run_env_ = nums[1];
-      parameter_server_["CTI_RUN_ENV"] = nums[1];
-      parameter_server_["CTI_RUN_VER"] = nums[0] + "." + nums[2];
-      parameter_server_["ROBOT_N"] = nums[3];
+    else
+    {
+        log_path_ = home_str + "/log/robot_config.log";
     }
-  }
-  fout.close();
+    std::string topic_state_yaml_path_;
+    if (!pnh_.getParam("topic_state_yaml_path", topic_state_yaml_path_))
+    {
+        topic_state_yaml_path_ = "/opt/cti/kinetic/share/robot_config/config/topic_state.yaml";
+    }
 
-  std::string read_nav_ver_path{cti_file_path_ + "/.cti_version"};
-  std::string nav_env_;
-  fout.open(read_nav_ver_path);
+    log_init(log_path_); //初始化系统日志
+    Info(" *****robot config start*****");
+    //--读取参数--
+    std::vector<TopicState> topicStates;
+    getParams(topicStates);
+    State *sensorState = NULL;
+    sensorStates_.clear();
+    for (int i = 0; i < topicStates.size(); i++)
+    {
+        sensorState = NULL;
+        if (topicStates[i].type == "sensor_msgs::PointCloud2")
+        {
+            sensorState = new SensorState<sensor_msgs::PointCloud2>(nh_, topicStates[i],topic_state_yaml_path_);
+        }
+        else if (topicStates[i].type == "sensor_msgs::LaserScan")
+        {
+            sensorState = new SensorState<sensor_msgs::LaserScan>(nh_, topicStates[i],topic_state_yaml_path_);
+        }
+        else if (topicStates[i].type == "sensor_msgs::Imu")
+        {
+            sensorState = new SensorState<sensor_msgs::Imu>(nh_, topicStates[i],topic_state_yaml_path_);
+        }
+        if (sensorState)
+        {
+            sensorStates_.push_back(sensorState);
+        }
+    }
+    //发布话题
+    pub_map_data_ = nh_.advertise<cti_msgs::MapDataConfig>("/robot_config/map_data_config", 1, true);
+    pub_map_config_ = nh_.advertise<cti_msgs::DataArray>("/robot_config/map_config", 1, true);
+    pub_robot_param_ = nh_.advertise<cti_msgs::RobotParamConfig>("/robot_config/robot_param_config", 1, true);
+    pub_robot_version_ = nh_.advertise<cti_msgs::RobotVersionDisplay>("/cti/robot_config/robotVersion", 1, true);
+    pub_base_pose_ = nh_.advertise<geometry_msgs::PoseStamped>("/cti/robot_config/base_link_pose", 1, true);
+    pub_sensor_state_ = nh_.advertise<cti_msgs::BoxState>("/cti/robot_config/sensorState", 1, true);
+    pub_error_msg = nh_.advertise<cti_msgs::ErrorStatusArray>("/cti/error_status/get", 5, true);
+    pub_mapAvmap_ver_err = nh_.advertise<std_msgs::Bool>("/cti/robot_config/mapAvmap_ver_Err", 1, true);
+    error_publisher = nh_.advertise<cti_msgs::ErrorStatus>("/cti/error_status/set", 20, true);
 
-  if (!fout.is_open()) {
-    RCLCPP_INFO_STREAM(this->get_logger(), "打开" + read_ver_path + "失败,");
-    nav_env_ = "null";
-    parameter_server_["CTI_NAV_VER"] = nav_env_;
-  } else {
-    getline(fout, nav_env_);
-    parameter_server_["CTI_NAV_VER"] = nav_env_;
-  }
-  fout.close();
+    pub_error1_msg = nh_.advertise<cti_msgs::ErrorStatus>("/cti/error_status/set", 3, true);
+    pub_error2_msg = nh_.advertise<cti_msgs::ErrorStatus>("/cti/error_status/set", 3, true);
+    pub_error3_msg = nh_.advertise<cti_msgs::ErrorStatus>("/cti/error_status/set", 3, true);
 
-
-  // LOG
-  std::string read_log_path{cti_file_path_ + "/ctilog"};
-  parameter_server_["CTI_RUN_LOG_PATH"] = read_log_path;
-  // cti_map
-  std::string read_vmap_path{cti_file_path_ + "/cti_vmap"};
-  parameter_server_["CTI_RUN_MAP_PATH"] = read_vmap_path;
-  cti_vmap_path_ = read_vmap_path;
-  // cti_vmap
-  std::string read_map_path{cti_file_path_ + "/cti_map"};
-  cti_map_path_ = read_map_path;
-  parameter_server_["CTI_MAP_PATH"] = read_map_path;
-
-  // cti_vmap_ver
-  std::string read_vmapVer_path{cti_vmap_path_ + "/" + run_env_ +
-                                "/version_vmap"};
-  fout.open(read_vmapVer_path);
-  if (!fout.is_open()) {
-    RCLCPP_INFO_STREAM(this->get_logger(),
-                       "打开" + read_vmapVer_path + "失败,");
-    robot_version_.map_version = "v1.0";
-    parameter_server_["CTI_RUN_MAP_VER"] = "v1.0";
-  } else {
-    std::string tmp2;
-    getline(fout, tmp2);
-    robot_version_.map_version = tmp2;
-    parameter_server_["CTI_RUN_MAP_VER"] = tmp2;
-  }
-  fout.close();
-
-  // cti_sw_
-  std::string read_swVer_path{cti_file_path_ + "/install/version"};
-  fout.open(read_swVer_path);
-  if (!fout.is_open()) {
-    RCLCPP_INFO_STREAM(this->get_logger(), "打开" + read_swVer_path + "失败,");
-    robot_version_.nav_version = "V0.0.0";
-    parameter_server_["CTI_SW_VER"] = "V0.0.0";
-  } else {
-    std::string tmp3;
-    getline(fout, tmp3);
-    robot_version_.nav_version = tmp3;
-    parameter_server_["CTI_SW_VER"] = tmp3;
-  }
-  fout.close();
-
-  // cameralow_flag
-  std::string read_cameralow_flag{
-      cti_vehicle_config_file_path_ +
-      "/candela_CameraLow_to_LidarLow_extrinsic.yml"};
-  fout.open(read_cameralow_flag);
-  if (!fout.is_open()) {
-    parameter_server_["CTI_CAMERALOW_FLAG"] = 0;
-  } else {
-    parameter_server_["CTI_CAMERALOW_FLAG"] = 1;
-  }
-  fout.close();
+    //订阅话题cti_msgs/ErrorStatus
+    sub_error_status_ = nh_.subscribe("/cti/error_status/set", 10, &RobotConfig::callback_error_status, this);
+    sub_opera_version_ = nh_.subscribe("/cti/fpga_serial/operationControlVersion", 1, &RobotConfig::callback_opera_version, this);
+    sub_robot_env_ = nh_.subscribe("/cti/robot_env", 1, &RobotConfig::callback_robot_env, this);
+    //sub_ndt_pose_ = nh_.subscribe("/ndt_pose", 1, &RobotConfig::callback_ndt_pose, this);
+    sub_localizer_state_ = nh_.subscribe("/cti_localizer_state", 1, &RobotConfig::callback_localizer_state, this);
+    //定时器
+    timer = nh_.createTimer(ros::Duration(0.1), &RobotConfig::timercallback, this);
+    //--sensorStates_
+    assignment(robot_config_file_);
+    // pubErrorMsg("SENSOR", 1, 11, " 超时 ");
 }
 
-void RobotConfig::pubErrorMsg(const std::string &modular_name,
-                              const uint &error_code, const uint &error_level,
-                              const std::string &error_msg) {
-  cti_msgs::msg::ErrorStatus error_msgs;
-  error_msgs.stamp = this->now();
-  error_msgs.module_name = modular_name;
-  error_msgs.error_code = error_code;
-  error_msgs.error_info = error_msg;
-  error_msgs.level = error_level;
-  pub_error_msg->publish(error_msgs);
-}
+void RobotConfig::getParams(std::vector<TopicState> &topicStates)
+{
+    if (!nh_.getParam("CTI_RUN_MAP_PATH", cti_vmap_path_))
+    {
+        cti_vmap_path_ = home_str + "/cti_vmap";
+    }
+    if (!nh_.getParam("CTI_MAP_PATH", cti_map_path_))
+    {
+        cti_map_path_ = home_str + "/cti_map";
+    }
+    if (!nh_.getParam("CTI_SW_VER", robotVersion_.navVersion))
+    {
+        robotVersion_.navVersion = "";
+    }
+    if (!nh_.getParam("CTI_RUN_ENV", run_env_))
+    {
+        run_env_ = "wkyc";
+    }
+    if (!nh_.getParam("CTI_RUN_MAP_VER", robotVersion_.mapVersion))
+    {
+        robotVersion_.mapVersion = "";
+    }
+    pnh_.param<std::string>("robot_config_file", robot_config_file_, "");
+    //--
+    std::string sub_name = "topic_state";
+    XmlRpc::XmlRpcValue sub_config;
+    if (!pnh_.getParam(sub_name, sub_config))
+    {
+        ROS_WARN("Could not load the configuration from parameter %s,are you sure it", sub_name.c_str());
+        return;
+    }
+    if (sub_config.getType() != XmlRpc::XmlRpcValue::TypeArray)
+    {
+        ROS_ERROR("XmlRpcType:%d", sub_config.getType());
+        return;
+    }
 
-void RobotConfig::getTopicStateParams(std::vector<TopicState> &topicStates) {
-  return;
-  try {
-    auto yaml_node = YAML::LoadFile(cti_topic_config_path_);
-    auto configs = yaml_node["topic_state"];
     topicStates.clear();
-    for (const auto &config : configs) {
-      TopicState state;
-      state.topic = config["topic"].as<std::string>();
-      state.name = config["name"].as<std::string>();
-      state.type = config["type"].as<std::string>();
-      state.timeout = config["timeout"].as<double>();
-      state.enable = config["enable"].as<bool>();
-      state.mul = config["mul"].as<int>();
-      topicStates.emplace_back(state);
+    for (int k = 0; k < sub_config.size(); k++)
+    {
+        TopicState state;
+        if (sub_config[k].hasMember("topic") && sub_config[k]["topic"].getType() == XmlRpc::XmlRpcValue::TypeString)
+        {
+            state.topic = static_cast<std::string>(sub_config[k]["topic"]);
+            ROS_INFO("topic:%s", state.topic.c_str());
+        }
+        if (sub_config[k].hasMember("name") && sub_config[k]["name"].getType() == XmlRpc::XmlRpcValue::TypeString)
+        {
+            state.name = static_cast<std::string>(sub_config[k]["name"]);
+            ROS_INFO("name:%s", state.name.c_str());
+        }
+        if (sub_config[k].hasMember("type") && sub_config[k]["type"].getType() == XmlRpc::XmlRpcValue::TypeString)
+        {
+            state.type = static_cast<std::string>(sub_config[k]["type"]);
+            ROS_INFO("type:%s", state.type.c_str());
+        }
+        if (sub_config[k].hasMember("timeout") && sub_config[k]["timeout"].getType() == XmlRpc::XmlRpcValue::TypeDouble)
+        {
+            state.timeout = static_cast<double>(sub_config[k]["timeout"]);
+            ROS_INFO("timeout:%f", state.timeout); 
+            Info("timeout:" << state.timeout);
+        }
+        if (sub_config[k].hasMember("enable") && sub_config[k]["enable"].getType() == XmlRpc::XmlRpcValue::TypeBoolean)
+        {
+            state.enable = static_cast<bool>(sub_config[k]["enable"]);
+            ROS_INFO("enable:%s", state.enable ? "true" : "false");
+        }
+        if (sub_config[k].hasMember("mul") && sub_config[k]["mul"].getType() == XmlRpc::XmlRpcValue::TypeInt)
+        {
+            state.mul = static_cast<int>(sub_config[k]["mul"]);
+            ROS_INFO("mul:%s", state.enable ? "true" : "false");
+        }
+        topicStates.push_back(state);
+        ROS_INFO("----------------");
     }
-
-  } catch (const std::exception &ex) {
-    RCLCPP_ERROR_STREAM(get_logger(), ex.what());
-  }
+    printf("size:%ld\n", topicStates.size());
 }
 
-void RobotConfig::getStaticTfParams(const std::string &path) {
-  try {
-    auto yaml_node = YAML::LoadFile(path);
-    auto configs = yaml_node["static_tf"];
-    for (const auto &config : configs) {
-      StaticTfState state;
-      state.frame_id = config["frame_id"].as<std::string>();
-      state.child_frame_id = config["child_frame_id"].as<std::string>();
-      state.translation_x = config["translation_x"].as<double>();
-      state.translation_y = config["translation_y"].as<double>();
-      state.translation_z = config["translation_z"].as<double>();
-      state.rotation_x = config["rotation_x"].as<double>();
-      state.rotation_y = config["rotation_y"].as<double>();
-      state.rotation_z = config["rotation_z"].as<double>();
-      state.rotation_w = config["rotation_w"].as<double>();
-      staticTfStates_.emplace_back(state);
+void RobotConfig::assignment(std::string file)
+{
+    if (file.empty())
+    {
+        return;
     }
+    cti_msgs::RobotParamConfig robot_config_;
+    std::unique_ptr<std::istream> is;
+    is.reset(new std::ifstream(file.c_str(), std::ifstream::in));
+    YAML::Node robot_config = YAML::Load(*is);
 
-  } catch (const std::exception &ex) {
-    RCLCPP_ERROR_STREAM(get_logger(), ex.what());
-  }
+    YAML::Node base_info = robot_config["base_info"];
+    YAML::Node type_info = robot_config["type_config"];
+    YAML::Node scene_info = robot_config["scene_config"];
+    YAML::Node sensor_info = robot_config["sensor_config"];
+    int robot_type = getParam<int>(base_info, "robot_type", 0);
+    int scene_type = getParam<int>(base_info, "scene", 0);
+
+    // --------------------------------------------------------
+    robot_config_.robot_type = getParam<int>(base_info, "robot_type", 0);
+    robot_config_.scene = getParam<int>(base_info, "scene", 0);
+    robot_config_.max_vx = getParam<float>(type_info, "max_vx", 0);
+    robot_config_.max_vz = getParam<float>(type_info, "max_vz", 0);
+    robot_config_.feedback_flag = getParam<int>(type_info, "feedback_flag", 0);
+    robot_config_.acc_x_up = getParam<float>(type_info, "acc_x_up", 0);
+    robot_config_.acc_x_down = getParam<float>(type_info, "acc_x_down", 0);
+    robot_config_.acc_z = getParam<float>(type_info, "acc_z", 0);
+    robot_config_.acc_for_curva = getParam<float>(type_info, "acc_for_curva", 0);
+    robot_config_.acc_for_x = getParam<float>(type_info, "acc_for_x", 0);
+    robot_config_.dis_for_back_global = getParam<float>(type_info, "dis_for_back_global", 0);
+    robot_config_.K_stop_enable = getParam<int>(type_info, "K_stop_enable", 0);
+    robot_config_.dis_tolerate_for_end = getParam<float>(type_info, "dis_tolerate_for_end", 0);
+    robot_config_.dis_tolerate_for_course = getParam<float>(type_info, "dis_tolerate_for_course", 0);
+    robot_config_.rad_tolerate = getParam<float>(type_info, "rad_tolerate", 0);
+    robot_config_.cos_proportion = getParam<float>(type_info, "cos_/cti/error_status/setproportion", 0);
+    robot_config_.rad_to_vz_proportion = getParam<float>(type_info, "rad_to_vz_proportion", 0);
+    robot_config_.reverse_vx = getParam<float>(type_info, "reverse_vx", 0);
+    robot_config_.guiderail2bumper = getParam<float>(type_info, "guiderail2bumper", 2.0);
+    robot_config_.disLoadToUnload = getParam<float>(type_info, "disLoadToUnload", 2.0);
+    robot_config_.disToLoad = getParam<float>(type_info, "disToLoad", 0.07);
+    pub_robot_param_.publish(robot_config_);
 }
 
-void RobotConfig::declareVehicleConfigParams() {
-  try {
-    YAML::Node vehicle_ = YAML::LoadFile(cti_vehicle_config_file_path_);
-    YAML::Node vehicle_info = vehicle_["/**"]["ros__parameters"];
-    for (auto const &param_namespace : vehicle_info) {
-      std::string name_space = param_namespace.first.as<std::string>();
-      for (auto const &param : param_namespace.second) {
-        std::string param_name = param.first.as<std::string>();
-        std::string declare_param_name = name_space + "." + param_name;
-        parameter_server_[declare_param_name] = param.second.as<double>();
-        RCLCPP_INFO_STREAM(this->get_logger(),
-                           "Declare Vehicle Parameter: "
-                               << declare_param_name << "---"
-                               << parameter_server_[declare_param_name]);
-      }
-    }
-
-  } catch (const std::exception &ex) {
-    RCLCPP_ERROR_STREAM(get_logger(), ex.what());
-  }
+void RobotConfig::pubErrorMsg(const std::string &modular_name, const uint &error_code, const uint &error_level, const std::string &error_msg)
+{
+    cti_msgs::ErrorStatus error_msgs;
+    error_msgs.stamp = ros::Time::now();
+    error_msgs.module_name = modular_name;
+    error_msgs.error_code = error_code;
+    error_msgs.error_info = error_msg;
+    error_msgs.level = error_level;
+    error_publisher.publish(error_msgs);
 }
 
-void RobotConfig::robotEnvCallback(const std_msgs::msg::String::SharedPtr msg) {
-  if (msg->data == "") {
-    RCLCPP_INFO_STREAM(get_logger(), "接受到环境地图为空");
-  }
-  run_env_ = msg->data;
-  parameter_server_["CTI_RUN_ENV"] = run_env_;
-  std::ifstream fout;
-  std::string read_vmapVer_path{cti_vmap_path_ + "/" + run_env_ +
-                                "/version_vmap"};
-  fout.open(read_vmapVer_path);
-  if (!fout.is_open()) {
-    RCLCPP_INFO_STREAM(this->get_logger(),
-                       "打开" + read_vmapVer_path + "失败,");
-    parameter_server_["CTI_RUN_MAP_VER"] = "v1.0";
-    robot_version_.map_version = "v1.0";
-  } else {
-    std::string tmp2;
-    getline(fout, tmp2);
-    parameter_server_["CTI_RUN_MAP_VER"] = tmp2;
-    robot_version_.map_version = tmp2;
-  }
-  fout.close();
-  RCLCPP_INFO_STREAM(get_logger(), "发布环境地图:" << run_env_);
-  publishMapconfig(run_env_);
-  pubParameterServer();
+void RobotConfig::callback_robot_env(const std_msgs::String &env)
+{
+    run_env_ = env.data;
+    Info("发布环境地图:" << run_env_);
+    publish_map_config(run_env_);
 }
 
-void RobotConfig::robotVersionCallback(
-    const cti_msgs::msg::RobotVersionDisplay::SharedPtr msg) {
-  robot_version_.operation_control_version = msg->operation_control_version;
-  robot_version_pub_->publish(robot_version_);
+void RobotConfig::callback_opera_version(const cti_msgs::RobotVersionDisplay::ConstPtr &msg)
+{
+    robotVersion_.operationControlVersion = msg->operationControlVersion.c_str();
+    pub_robot_version_.publish(robotVersion_);
 }
 
-void RobotConfig::localizerStateCallback(
-    const cti_msgs::msg::RobotLocalizerState::SharedPtr msg) {
-  localizer_state_ = msg->id;
+void RobotConfig::callback_localizer_state(const cti_msgs::RobotLocalizerState &localizer_state)
+{
+    localizer_state_ = localizer_state.id;
 }
 
 //发布函数
-void RobotConfig::publishMapconfig(const std::string &env) {
-  cti_msgs::msg::MapDataConfig config;
-  config.cross_walk = cti_vmap_path_ + "/" + env + "/" + "crosswalk.csv";
-  config.lane = cti_vmap_path_ + "/" + env + "/" + "lane.csv";
-  config.signal = cti_vmap_path_ + "/" + env + "/" + "signal.csv";
-  config.road_edge = cti_vmap_path_ + "/" + env + "/" + "roadedge.csv";
-  config.path_goal = cti_vmap_path_ + "/" + env + "/" + "pathgoal.csv";
-  config.stop_point = cti_vmap_path_ + "/" + env + "/" + "stoppoint.csv";
-  config.wait_line = cti_vmap_path_ + "/" + env + "/" + "waitline.csv";
-  config.junction = cti_vmap_path_ + "/" + env + "/" + "junction.csv";
-  config.gid = cti_vmap_path_ + "/" + env + "/" + "gid.csv";
-  config.dece_zone = cti_vmap_path_ + "/" + env + "/" + "decezone.csv";
-  config.gate = cti_vmap_path_ + "/" + env + "/" + "gate.csv";
-  config.clear_area = cti_vmap_path_ + "/" + env + "/" + "cleararea.csv";
-  config.spray_area = cti_vmap_path_ + "/" + env + "/" + "sprayarea.csv";
-  config.elevator = cti_vmap_path_ + "/" + env + "/" + "elevator.csv";
-  config.converge_point =
-      cti_vmap_path_ + "/" + env + "/" + "convergepoint.csv";
-  config.lanelet = cti_vmap_path_ + "/" + env + "/" + "hdmap.osm";
-  config.pcd = cti_map_path_ + "/" + env + "/" + env + ".pcd";
-  config.ndt2gps = cti_map_path_ + "/" + env + "/" + "calibration.yaml";
-  config.attribute_area =
-      cti_vmap_path_ + "/" + env + "/" + "attributearea.csv";
-  map_data_pub_->publish(config);
+void RobotConfig::publish_map_config(std::string env)
+{
+    // cti_msgs::MapDataConfig config;
+    // config.crosswalk = cti_vmap_path_ + "/" + env + "/" + "crosswalk.csv";
+    // config.lane = cti_vmap_path_ + "/" + env + "/" + "lane.csv";
+    // config.signal = cti_vmap_path_ + "/" + env + "/" + "signal.csv";
+    // config.roadedge = cti_vmap_path_ + "/" + env + "/" + "roadedge.csv";
+    // config.pathgoal = cti_vmap_path_ + "/" + env + "/" + "pathgoal.csv";
+    // config.stoppoint = cti_vmap_path_ + "/" + env + "/" + "stoppoint.csv";
+    // config.waitline = cti_vmap_path_ + "/" + env + "/" + "waitline.csv";
+    // config.junction = cti_vmap_path_ + "/" + env + "/" + "junction.csv";
+    // config.gid = cti_vmap_path_ + "/" + env + "/" + "gid.csv";
+    // config.decezone = cti_vmap_path_ + "/" + env + "/" + "decezone.csv";
+    // config.gate = cti_vmap_path_ + "/" + env + "/" + "gate.csv";
+    // config.cleararea = cti_vmap_path_ + "/" + env + "/" + "cleararea.csv";
+    // config.sprayarea = cti_vmap_path_ + "/" + env + "/" + "sprayarea.csv";
+    // config.elevator = cti_vmap_path_ + "/" + env + "/" + "elevator.csv";
+    // config.convergepoint = cti_vmap_path_ + "/" + env + "/" + "convergepoint.csv";
+    // config.lanelet = cti_vmap_path_ + "/" + env + "/" + "hdmap.osm";
+    // config.pcd = cti_map_path_ + "/" + env + "/" + env + ".pcd";
+    // config.ndt2gps = cti_map_path_ + "/" + env + "/" + "calibration.yaml";
+    // config.attributearea = cti_map_path_ + "/" + env + "/" + "attributearea.csv";
+    // pub_map_data_.publish(config);
+    //----
+    auto dataConfig = [&](std::string name, std::string value, int type) -> cti_msgs::Data
+    {
+        cti_msgs::Data data;
+        data.name = name;
+        data.data = value;
+        data.type = type;
+        return data;
+    };
+
+
+    cti_msgs::DataArray datas;
+    datas.datas.push_back(dataConfig("crosswalk", cti_vmap_path_ + "/" + env + "/" + "crosswalk.csv", cti_msgs::Data::TYPE_STRING));
+    datas.datas.push_back(dataConfig("lane", cti_vmap_path_ + "/" + env + "/" + "lane.csv", cti_msgs::Data::TYPE_STRING));
+    datas.datas.push_back(dataConfig("signal", cti_vmap_path_ + "/" + env + "/" + "signal.csv", cti_msgs::Data::TYPE_STRING));
+    datas.datas.push_back(dataConfig("roadedge", cti_vmap_path_ + "/" + env + "/" + "roadedge.csv", cti_msgs::Data::TYPE_STRING));
+    datas.datas.push_back(dataConfig("pathgoal", cti_vmap_path_ + "/" + env + "/" + "pathgoal.csv", cti_msgs::Data::TYPE_STRING));
+    datas.datas.push_back(dataConfig("stoppoint", cti_vmap_path_ + "/" + env + "/" + "stoppoint.csv", cti_msgs::Data::TYPE_STRING));
+    datas.datas.push_back(dataConfig("waitline", cti_vmap_path_ + "/" + env + "/" + "waitline.csv", cti_msgs::Data::TYPE_STRING));
+    datas.datas.push_back(dataConfig("junction", cti_vmap_path_ + "/" + env + "/" + "junction.csv", cti_msgs::Data::TYPE_STRING));
+    datas.datas.push_back(dataConfig("gid", cti_vmap_path_ + "/" + env + "/" + "gid.csv", cti_msgs::Data::TYPE_STRING));
+    datas.datas.push_back(dataConfig("decezone", cti_vmap_path_ + "/" + env + "/" + "decezone.csv", cti_msgs::Data::TYPE_STRING));
+    datas.datas.push_back(dataConfig("gate", cti_vmap_path_ + "/" + env + "/" + "gate.csv", cti_msgs::Data::TYPE_STRING));
+    datas.datas.push_back(dataConfig("cleararea", cti_vmap_path_ + "/" + env + "/" + "cleararea.csv", cti_msgs::Data::TYPE_STRING));
+    datas.datas.push_back(dataConfig("sprayarea", cti_vmap_path_ + "/" + env + "/" + "sprayarea.csv", cti_msgs::Data::TYPE_STRING));
+    datas.datas.push_back(dataConfig("elevator", cti_vmap_path_ + "/" + env + "/" + "elevator.csv", cti_msgs::Data::TYPE_STRING));
+    datas.datas.push_back(dataConfig("convergepoint", cti_vmap_path_ + "/" + env + "/" + "convergepoint.csv", cti_msgs::Data::TYPE_STRING));
+    datas.datas.push_back(dataConfig("lanelet", cti_vmap_path_ + "/" + env + "/" + "hdmap.osm", cti_msgs::Data::TYPE_STRING));
+    datas.datas.push_back(dataConfig("pcd", cti_map_path_ + "/" + env + "/" + env + ".pcd", cti_msgs::Data::TYPE_STRING));
+    datas.datas.push_back(dataConfig("ndt2gps", cti_map_path_ + "/" + env + "/" + "calibration.yaml", cti_msgs::Data::TYPE_STRING));
+    datas.datas.push_back(dataConfig("attributearea", cti_vmap_path_ + "/" + env + "/" + "attributearea.csv", cti_msgs::Data::TYPE_STRING));
+    pub_map_config_.publish(datas);
 }
 
 //发布所有传感器状态信息
-void RobotConfig::publishSensorState() {
-  cti_msgs::msg::BoxState sensor_states;
-  sensor_states.header.stamp = this->now();
+void RobotConfig::publishSensorState()
+{
+    cti_msgs::BoxState sensor_states;
+    int numb_sensor_data = 0;
 
-  int numb_sensor_data = 0;
+    sensor_states.header.stamp = ros::Time::now();
+    for (auto state : sensorStates_)
+    {
+        if (state->getMul() == 0)
+        {
+            continue;
+        }
 
-  for (const auto &state : sensor_states_) {
-    if (state->getMul() == 0) {
-      continue;
+        cti_msgs::TabState tabstate;
+        tabstate.id = numb_sensor_data;
+        tabstate.status = state->state();
+        tabstate.name = state->getName();
+
+        if (tabstate.status == State::ERROR)
+        {
+            tabstate.message = " no init";
+            Info("lidar.name:" << tabstate.name << "  lidar.statu:no init ");
+            pubErrorMsg("SENSOR", 0, 11, tabstate.name + " 没有初始化 ");
+        }
+        else if (tabstate.status == State::OVERTIME)
+        {
+            tabstate.message = " over time";
+            Info("lidar.name:" << tabstate.name << "  lidar.statu:over time ");
+            pubErrorMsg("SENSOR", 1, 11, tabstate.name + " 超时 ");
+        }
+        else
+        {
+            tabstate.message = " is normal";
+        }
+
+        numb_sensor_data++;
+        sensor_states.states.push_back(tabstate);
+    }
+    pub_sensor_state_.publish(sensor_states);
+}
+
+void RobotConfig::log_init(std::string log_path)
+{
+    Logger::setDefaultLogger(log_path);
+    Logger::getLogger().setOutputs(Logger::Output::Both);
+    Logger::getLogger().setLogLevel(LogLevel::Debu);
+    Logger::getLogger().enableTid(false);
+    Logger::getLogger().enableIdx(true);
+}
+
+void RobotConfig::callback_error_status(const cti_msgs::ErrorStatus &msg)
+{
+    static double pub_time{ros::Time::now().toSec()};
+
+    if (error_msg_array.data.size() == 0) //初始化
+    {
+        pub_time = ros::Time::now().toSec();
+        error_msg_array.data.push_back(msg);
     }
 
-    cti_msgs::msg::TabState tabstate;
-    tabstate.id = numb_sensor_data;
-    tabstate.status = state->getState();
-    tabstate.name = state->getName();
-
-    if (tabstate.status == StateType::ERROR) {
-      tabstate.message = " no init";
-      // RCLCPP_INFO_STREAM_SKIPFIRST_THROTTLE(
-      //     get_logger(), *(get_clock()), 5000,
-      //     "lidar.name:" << tabstate.name << "  lidar.statu:no init");
-      RCLCPP_INFO_STREAM(
-          get_logger(),
-          "lidar.name:" << tabstate.name << "  lidar.statu:no init");
-      pubErrorMsg("SENSOR", 0, 11, tabstate.name + " 没有初始化 ");
-    } else if (tabstate.status == StateType::OVERTIME) {
-      tabstate.message = " over time";
-      // RCLCPP_INFO_STREAM_SKIPFIRST_THROTTLE(
-      //     get_logger(), *(get_clock()), 5000,
-      //     "lidar.name:" << tabstate.name << "  lidar.statu:over time");
-      RCLCPP_INFO_STREAM(
-          get_logger(),
-          "lidar.name:" << tabstate.name << "  lidar.statu:over time");
-      pubErrorMsg("SENSOR", 1, 11, tabstate.name + " 超时 ");
-    } else {
-      tabstate.message = " is normal";
+    if (ros::Time::now().toSec() - pub_time > 0.9) //超过  ，还没收到信息，一般是已经恢复正常了
+    {
+        std::cout << error_msg_array.data[0].module_name << std::endl;
+        pub_error_msg.publish(error_msg_array);
+        error_msg_array.data.clear();
+        pub_error_msg.publish(error_msg_array);
+        release_error_msg = false;
+        return;
     }
-    numb_sensor_data++;
-    sensor_states.states.push_back(tabstate);
-  }
-  sensor_state_pub_->publish(sensor_states);
-}
 
-void RobotConfig::error_status_Callback(
-    const cti_msgs::msg::ErrorStatus::SharedPtr msg) {
-  static double pub_time{this->now().seconds()};
-
-  if (error_msg_array.data.size() == 0)  //初始化
-  {
-    pub_time = this->now().seconds();
-    error_msg_array.data.push_back(*msg);
-  }
-
-  if (this->now().seconds() - pub_time >
-      0.9)  //超过  ，还没收到信息，一般是已经恢复正常了
-  {
-    pub_errorArray_publisher->publish(error_msg_array);
-    error_msg_array.data.clear();
-    pub_errorArray_publisher->publish(error_msg_array);
-    release_error_msg = false;
-    return;
-  }
-
-  bool flag{false};
-  for (auto sub : error_msg_array.data)  //重复的信息过滤
-  {
-    if (sub.module_name == msg->module_name &&
-        sub.error_code == msg->error_code &&
-        sub.error_info == msg->error_info) {
-      flag = true;
-      break;
+    bool flag{false};
+    for (auto sub : error_msg_array.data) //重复的信息过滤
+    {
+        if (sub.module_name == msg.module_name && sub.error_code == msg.error_code && sub.error_info == msg.error_info)
+        {
+            flag = true;
+            break;
+        }
     }
-  }
 
-  if (!flag) {
-    if (!msg->module_name.empty()) {
-      error_msg_array.data.push_back(*msg);
+    if (!flag)
+    {
+        if (!msg.module_name.empty())
+        {
+            error_msg_array.data.push_back(msg);
+        }
     }
-  }
 
-  if (this->now().seconds() - pub_time > 0.5)  // 2hz 发送一次收集的错误码
-  {
-    pub_errorArray_publisher->publish(error_msg_array);
-    error_msg_array.data.clear();
-    release_error_msg = false;
-    return;
-  }
-
-  release_error_msg = true;
-  time_monitor_err = this->now().seconds();
-}
-
-void RobotConfig::monitor_release_data() {
-  if (release_error_msg == 1) {
-    if (this->now().seconds() - time_monitor_err > 1) {
-      cti_msgs::msg::ErrorStatus::SharedPtr msg;
-      error_status_Callback(msg);
+    if (ros::Time::now().toSec() - pub_time > 0.5) //2hz 发送一次收集的错误码
+    {
+        pub_error_msg.publish(error_msg_array);
+        error_msg_array.data.clear();
+        release_error_msg = false;
+        return;
     }
-  }
+
+    release_error_msg = true;
+    time_monitor_err = ros::Time::now().toSec();
 }
 
-void RobotConfig::pubParameterServer() {
-  Json::FastWriter writer;
-  std_msgs::msg::String msg;
-  msg.data = writer.write(parameter_server_);
-  parameter_server_pub_->publish(msg);
+void RobotConfig::monitor_release_data()
+{
+    if (release_error_msg == 1)
+    {
+        if (ros::Time::now().toSec() - time_monitor_err > 1)
+        {
+            cti_msgs::ErrorStatus msg;
+            callback_error_status(msg);
+        }
+    }
 }
 
-void RobotConfig::makeUltStaticTransforms() {
-  rclcpp::Time now = this->get_clock()->now();
-  geometry_msgs::msg::TransformStamped t;
-
-  for (auto state : staticTfStates_) {
-    t.header.stamp = now;
-    t.header.frame_id = state.frame_id;
-    t.child_frame_id = state.child_frame_id;
-
-    t.transform.translation.x = state.translation_x;
-    t.transform.translation.y = state.translation_y;
-    t.transform.translation.z = state.translation_z;
-
-    t.transform.rotation.x = state.rotation_x;
-    t.transform.rotation.y = state.rotation_y;
-    t.transform.rotation.z = state.rotation_z;
-    t.transform.rotation.w = state.rotation_w;
-
-    tf_publisher_->sendTransform(t);
-  }
+//-------------- timer ----------  -------------   ----------------
+void RobotConfig::timercallback(const ros::TimerEvent &event)
+{
+    publishSensorState();
+    // std::cout<<"----------------------"<<std::endl;
+    monitor_release_data();
+    // callback_error_msg1();
+    // callback_error_msg2();
+    // callback_error_msg3();
 }
 
-//-------------- timer ---------------------------------------
-void RobotConfig::timercallback() {
-  publishSensorState();
-  monitor_release_data();
-  makeUltStaticTransforms();
+void RobotConfig::callback_error_msg1()
+{
+    static int i = 1;
+    cti_msgs::ErrorStatus error;
+    error.error_code = 100;
+    error.error_info = "error_1";
+    error.module_name = "error_1";
+    error.level = 5;
+    pub_error1_msg.publish(error);
 }
+
+void RobotConfig::callback_error_msg2()
+{
+    static int q = 100;
+    if (q == 0)
+    {
+        return;
+    }
+    q--;
+
+    cti_msgs::ErrorStatus error;
+    error.error_code = 1011;
+    error.error_info = "error_2";
+    error.module_name = "error_2";
+    error.level = 2;
+    pub_error2_msg.publish(error);
+}
+
+void RobotConfig::callback_error_msg3()
+{
+    static int q = 0;
+    q++;
+    if (q < 30 || q > 150)
+    {
+        return;
+    }
+
+    cti_msgs::ErrorStatus error;
+    error.error_code = 102;
+    error.error_info = "error_3";
+    error.module_name = "error_3";
+    error.level = 0;
+    pub_error3_msg.publish(error);
+}
+
+//主函数
+int main(int argc, char **argv)
+{
+    ros::init(argc, argv, "robot_config_node");
+    RobotConfig rc;
+    rc.init();
+
+    if (setUnlimit() == -1)
+    {
+        return -1;
+    }
+    ros::spin();
+}
+
+//取消ndt——pose
+// void RobotConfig::callback_ndt_pose(const geometry_msgs::PoseStamped &ndt_pose)
+// {
+//     ndt_pose_ = ndt_pose;
+//     tf::StampedTransform transform_base;//定义存放变换关系的变量
+//     //监听两个坐标系之间的变换
+//     try{
+//       tf_listen_.lookupTransform("/map","/base_link",ros::Time(0),transform_base);
+//     }catch(tf::TransformException ex){
+//       ROS_ERROR("%s",ex.what());
+//       return ;
+//     }
+//     base_pose_.header.stamp = ros::Time::now();
+//     base_pose_.pose.position.x = transform_base.getOrigin().x();
+//     base_pose_.pose.position.y = transform_base.getOrigin().y();
+//     base_pose_.pose.position.z = transform_base.getOrigin().z();
+//     base_pose_.pose.orientation.x = transform_base.getRotation().getX();
+//     base_pose_.pose.orientation.y = transform_base.getRotation().getY();
+//     base_pose_.pose.orientation.z = transform_base.getRotation().getZ();
+//     base_pose_.pose.orientation.w = transform_base.getRotation().getW();
+//     pub_base_pose_.publish(base_pose_);
+// }
+
+//读取文本 对比字符串
+// void RobotConfig::check_mpaAndvmap_version()
+// {
+//     //读取vmap version版本
+//     ifstream fout;
+//     std::string read_path{ "/home/neousys/cti_vmap/" + run_env_ + "version_vmap"};
+//     fout.open(read_path);
+
+//     if( !fout.is_open() )
+//     {
+//         std::cout<<"打开"+read_path+"失败"<<std::endl;
+//     }
+
+//     std::vector<std::string> v;
+//     std::string tmp;
+
+//     while (getline(fout, tmp))
+//     {
+//         v.push_back(tmp);
+//     }
+//     fout.close();
+
+//     //读取map version版本
+//     ifstream fout2;
+//     std::string read_path2{ "/home/neousys/cti_map/" + run_env_ + "version"};
+//     fout2.open(read_path2);
+
+//     if( !fout2.is_open() )
+//     {
+//         std::cout<<"打开"+read_path2+"失败"<<std::endl;
+//     }
+
+//     std::string tmp2;
+//     getline(fout2, tmp2);
+//     std::string v2 = tmp2.substr(8,5);     //获得字符串s中从第8位开始的长度为5的字符串
+//     fout2.close();
+
+//     //对比版本是否相同,相同不相同则报错
+//     std_msgs::Bool flag;
+//     if( v2 != v[1] )
+//     {
+//         flag.data = false;
+//         pub_mapAvmap_ver_err.publish( flag );
+//     }
+//     else
+//     {
+//         flag.data = true;
+//         pub_mapAvmap_ver_err.publish( flag );
+//     }
+// }
+
